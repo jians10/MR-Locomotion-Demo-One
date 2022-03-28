@@ -18,7 +18,7 @@ public class MyLocomotionController : MonoBehaviour
             leftTeleportRay.gameObject.SetActive(CheckIfActivated(leftTeleportRay));
         }
 
-        if (rightTeleportRay)
+        if(rightTeleportRay)
         {
             rightTeleportRay.gameObject.SetActive(CheckIfActivated(rightTeleportRay));
         }

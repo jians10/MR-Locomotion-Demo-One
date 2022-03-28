@@ -14,10 +14,14 @@ public class VRFootIK : MonoBehaviour
     public float leftFootPosWeight = 1;
     [Range(0, 1)]
     public float leftFootRotWeight = 1;
+    int ground_layer = 0;
+
 
     // Start is called before the first frame update
     void Start()
     {
+
+        ground_layer = LayerMask.GetMask("Ground");
         animator = GetComponent<Animator>();
     }
 
@@ -43,7 +47,7 @@ public class VRFootIK : MonoBehaviour
 
         Vector3 leftFootPos = animator.GetIKPosition(AvatarIKGoal.LeftFoot);
 
-        hasHit = Physics.Raycast(leftFootPos + Vector3.up, Vector3.down, out hit);
+        hasHit = Physics.Raycast(leftFootPos + Vector3.up, Vector3.down, out hit, ground_layer);
         if (hasHit)
         {
             animator.SetIKPositionWeight(AvatarIKGoal.LeftFoot, leftFootPosWeight);
