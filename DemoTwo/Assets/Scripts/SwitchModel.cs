@@ -14,36 +14,57 @@ public class SwitchModel : MonoBehaviour
     public float activationThreshold = 0.1f;
     private bool holdtrigger = false;
     public Rig MyRig;
+    public Animator myAnimator;
+    public GameObject headPos;
+    public GameObject mycamera;
+    private GameObject TempCameraAnchorTp;
+    public Transform TempCameraAnchorFp;
+    public Transform CameraAnchorRoot;
     //public Rig RightHand;
+
 
 
 
     void Start()
     {
         Teleport = true;
+        SetCameraLocation(true);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if ((!holdtrigger)&&CheckIfActivated(rightController)) {
+        if ((!holdtrigger) && CheckIfActivated(rightController)) {
             Teleport = !Teleport;
+            if (Teleport)
+            {
+                EnableHandIK();
+                EnableUpperBodyAnimation(false);
+                SetCameraLocation(true);
+            }
+            else
+            {
+                DisableHandIK();
+                EnableUpperBodyAnimation(true);
+                SetCameraLocation(false);
+            }
         }
 
-        if (!CheckIfActivated(rightController)) {
+        /*if (!Teleport)
+        {
+            mycamera.transform.rotation = Quaternion.Euler(0, 0, 0);
+            //mycamera.transform.LookAt(headPos.transform);
+        }*/
+
+        if (!CheckIfActivated(rightController))
+        {
             holdtrigger = false;
-        }
-
-        if (Teleport) {
-            EnableHandIK();
-        } else {
-            DisableHandIK();
         }
     }
 
-    void DisableHandIK() 
-    { 
-       MyRig.weight = 0;
+    void DisableHandIK()
+    {
+        MyRig.weight = 0;
     }
 
     void EnableHandIK()
@@ -58,8 +79,60 @@ public class SwitchModel : MonoBehaviour
         {
             holdtrigger = true;
         }
-        
+
         return isActivated;
     }
+
+    public bool EnableUpperBodyAnimation(bool enable)
+    {
+        if (enable)
+        {
+            myAnimator.SetLayerWeight(0, 1);
+            myAnimator.SetLayerWeight(1, 0);
+        }
+        else {
+            myAnimator.SetLayerWeight(1, 1);
+            myAnimator.SetLayerWeight(0, 0);
+        }
+        return true;
+    }
+    public void SetCameraLocation(bool FP){
+        if (FP)
+        {
+            mycamera.transform.SetParent(TempCameraAnchorFp);
+            headPos.transform.SetParent(mycamera.transform);
+            headPos.transform.localPosition = new Vector3(0, 0, -0.09f);
+            deletCameraAnchor();
+        }
+        else {
+            // Third Person
+            headPos.transform.SetParent(TempCameraAnchorFp);
+            headPos.transform.localPosition = new Vector3(0, 1.4f, -0.09f);
+            ProduceCameraAnchor();
+            mycamera.transform.SetParent(TempCameraAnchorTp.transform);
+            //mycamera.transform.LookAt(headPos.transform);
+        }
+        
+
+    }
+
+    public void ProduceCameraAnchor() {
+        if (!TempCameraAnchorTp)
+        {
+            TempCameraAnchorTp = new GameObject("Camera Anchor");
+            TempCameraAnchorTp.transform.position = CameraAnchorRoot.position + new Vector3(0, 0.6f, -2);
+        }
+    }
+
+    public void deletCameraAnchor() {
+        if (TempCameraAnchorTp)
+        {
+            Destroy(TempCameraAnchorTp);
+        }
+        
+    
+    }
+
+
 
 }
