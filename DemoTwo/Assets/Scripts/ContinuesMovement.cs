@@ -17,9 +17,11 @@ public class ContinuesMovement : MonoBehaviour
     public float additionalHeight = 0.2f;
     public GameObject cameraGameObject;
     private float fallingSpeed;
+    private MoveMode myMoveMode;
 
     void Start()
     {
+        myMoveMode = MoveMode.Instance;
         character = GetComponent<CharacterController>();
        
     }
@@ -27,18 +29,15 @@ public class ContinuesMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (GetComponent<SwitchModel>().Teleport) {
+        if (!myMoveMode.isContinousMovement()) {
             return;
         }
-
-
-
         InputDevice device = InputDevices.GetDeviceAtXRNode(inputSource);
         device.TryGetFeatureValue(CommonUsages.primary2DAxis, out inputAxis);
     }
     void FixedUpdate() {
 
-        if (GetComponent<SwitchModel>().Teleport)
+        if (!myMoveMode.isContinousMovement())
         {
             return;
         }

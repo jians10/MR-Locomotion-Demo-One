@@ -33,12 +33,8 @@ public class VRAnimatorController : MonoBehaviour
         //Set Animator Values
         float previousDirectionX = animator.GetFloat("DirectionX");
         float previousDirectionY = animator.GetFloat("DirectionY");
-
-
-        Debug.Log(headsetLocalSpeed.x);
-        Debug.Log(headsetLocalSpeed.y);
-
-
+        //Debug.Log(headsetLocalSpeed.x);
+        //Debug.Log(headsetLocalSpeed.y);
         animator.SetBool("isMoving", headsetLocalSpeed.magnitude > speedTreshold);
         animator.SetFloat("DirectionX", Mathf.Lerp(previousDirectionX, Mathf.Clamp(headsetLocalSpeed.x,-1,1),smoothing));
         animator.SetFloat("DirectionY", Mathf.Lerp(previousDirectionY, Mathf.Clamp(headsetLocalSpeed.z, -1, 1),smoothing));

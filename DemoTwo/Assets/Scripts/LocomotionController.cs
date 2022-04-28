@@ -19,19 +19,38 @@ public class LocomotionController : MonoBehaviour
     
     private NavMeshAgent navMeshAgent;
     private Vector3 falsevalue;
+    public float thresholdistance;
 
+    private LineRenderer mylineRender;
+    private MoveMode myMoveMode;
 
+    private void Awake()
+    {
+        myMoveMode = MoveMode.Instance;
+    }
 
     void Start()
     {
+       
         holdtrigger = false;
         navMeshAgent = GetComponent<NavMeshAgent>();
+        mylineRender = GetComponent<LineRenderer>();
         navigating = false;
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (!myMoveMode.isNavigation())
+        {
+            navigating = false;
+            if (mylineRender.enabled)
+            {
+                mylineRender.enabled = false;
+            }
+            return;
+        }
+
         if ((!holdtrigger) && DetectUserInput(LeftController))
         {
             navigating = true;
@@ -41,6 +60,45 @@ public class LocomotionController : MonoBehaviour
         if (!DetectUserInput(LeftController))
         {
             holdtrigger = false;
+        }
+
+        if (!navigating) {
+            if (mylineRender.enabled)
+            {
+                mylineRender.enabled = false;
+            }
+        }
+
+        if (navigating)
+        { 
+            if (!mylineRender.enabled)
+            {
+                mylineRender.enabled = true;
+            }
+
+            navMeshAgent.destination = Destineposition;
+
+            float remaindistance = Mathf.Abs(Vector3.Distance(navMeshAgent.destination, transform.position));
+            drawpath();
+            if (remaindistance < thresholdistance)
+            {
+                navMeshAgent.SetDestination(transform.position);
+                navigating = false;
+            }
+
+        }
+    }
+
+    void drawpath() {
+        mylineRender.positionCount = navMeshAgent.path.corners.Length;
+        mylineRender.SetPosition(0, transform.position);
+        if (navMeshAgent.path.corners.Length < 2) {
+            return;
+        }
+        for (int i = 1; i < navMeshAgent.path.corners.Length; i++) {
+            Vector3 pointPosition = new Vector3(navMeshAgent.path.corners[i].x, navMeshAgent.path.corners[i].y+1f, navMeshAgent.path.corners[i].z);
+            mylineRender.SetPosition(i,pointPosition);
+        
         }
     }
 
@@ -60,25 +118,23 @@ public class LocomotionController : MonoBehaviour
 
     bool GetSelectedLocation()
     {
-        //Vector3 normal;
-        //int positionInLine;
-        //bool isValidTarget;
-        //MyXRRay.TryGetHitInfo(out Destineposition, out  normal, out positionInLine, out isValidTarget);
-
-        //GameObject destinationobject = GameObject.Find("Cylinder");
-        //if(Cylinder !=  )
-        //if (!isValidTarget){
-        //    Destineposition = falsevalue;
-        //}
-
-
         GameObject destinationObject = MyXRRay.reticle;
         if (destinationObject)
         {
-            Destineposition = destinationObject.transform.position;
+            if (CanReachPosition(destinationObject.transform.position))
+            {
+                Destineposition = destinationObject.transform.position;
+            }
         }
 
         return true;
     }
-   
+
+    bool CanReachPosition(Vector3 position)
+    {
+        NavMeshPath path = new NavMeshPath();
+        navMeshAgent.CalculatePath(position, path);
+        return path.status == NavMeshPathStatus.PathComplete;
+    }
+
 }

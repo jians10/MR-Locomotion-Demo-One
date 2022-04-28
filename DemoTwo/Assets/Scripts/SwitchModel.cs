@@ -4,10 +4,12 @@ using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.Animations.Rigging;
+using UnityEngine.AI;
 public class SwitchModel : MonoBehaviour
 {
     // Start is called before the first frame update
-    public bool Teleport;
+    
+
     public XRNode inputSource;
     public XRController rightController;
     public InputHelpers.Button teleportActivationButton;
@@ -20,41 +22,61 @@ public class SwitchModel : MonoBehaviour
     private GameObject TempCameraAnchorTp;
     public Transform TempCameraAnchorFp;
     public Transform CameraAnchorRoot;
-    //public Rig RightHand;
-
-
-
+    public TeleportationProvider teleportcontroller;
+    public GameObject cammeraControllerRoot;
+    public Transform AvatarRoot;
+    private NavMeshAgent navMeshAgent;
+    private MoveMode myMoveMode;
+    public GameObject LeftHandRay;
+    public XRInteractorLineVisual LeftLineVisual;
+    public XRRayInteractor LeftLineInteractor;
+    //private LocomotionController mylocomotionController;
 
     void Start()
     {
-        Teleport = true;
-        SetCameraLocation(true);
+        myMoveMode = MoveMode.Instance;
+        myMoveMode.setModetoTeleport();
+        SetCameraLocation();
+        navMeshAgent = GetComponent<NavMeshAgent>();
+        //mylocomotionController = GetComponent<LocomotionController>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if ((!holdtrigger) && CheckIfActivated(rightController)) {
-            Teleport = !Teleport;
-            if (Teleport)
+        if ((!holdtrigger) && CheckIfActivated(rightController) )
+        {
+            
+            myMoveMode.getNext();
+
+
+
+            if (myMoveMode.isTeleport())
             {
                 EnableHandIK();
                 EnableUpperBodyAnimation(false);
-                SetCameraLocation(true);
+                SetCameraLocation();
+                controllteleportandNav();
+            
+            }
+            else if (myMoveMode.isContinousMovement())
+            {
+                DisableHandIK();
+                EnableUpperBodyAnimation(true);
+                SetCameraLocation();
+                controllteleportandNav();
+
             }
             else
             {
                 DisableHandIK();
                 EnableUpperBodyAnimation(true);
-                SetCameraLocation(false);
+                SetCameraLocation();
+                controllteleportandNav();
+              
+
             }
         }
-
-        /*if (!Teleport)
-        {
-            mycamera.transform.rotation = Quaternion.Euler(0, 0, 0);
-            //mycamera.transform.LookAt(headPos.transform);
-        }*/
 
         if (!CheckIfActivated(rightController))
         {
@@ -96,31 +118,53 @@ public class SwitchModel : MonoBehaviour
         }
         return true;
     }
-    public void SetCameraLocation(bool FP){
-        if (FP)
+    public void SetCameraLocation(){
+        if (myMoveMode.isTeleport())
         {
+            cammeraControllerRoot.transform.rotation = AvatarRoot.transform.rotation;
+            mycamera.transform.rotation = AvatarRoot.transform.rotation;
+            headPos.transform.rotation = AvatarRoot.transform.rotation;
+
+            cammeraControllerRoot.transform.SetParent(AvatarRoot);
+            cammeraControllerRoot.transform.localPosition = new Vector3(0, 0, 0);
+            //cammeraControllerRoot.transform.localRotation = new Vector3(0, 0, 0);
+            
             mycamera.transform.SetParent(TempCameraAnchorFp);
             headPos.transform.SetParent(mycamera.transform);
             headPos.transform.localPosition = new Vector3(0, 0, -0.09f);
             deletCameraAnchor();
+
         }
-        else {
-            // Third Person
+        else if (myMoveMode.isContinousMovement())
+        {
             headPos.transform.SetParent(TempCameraAnchorFp);
-            headPos.transform.localPosition = new Vector3(0, 1.4f, -0.09f);
+            headPos.transform.localPosition = new Vector3(0, 1.3f, -0.09f);
             ProduceCameraAnchor();
             mycamera.transform.SetParent(TempCameraAnchorTp.transform);
-            //mycamera.transform.LookAt(headPos.transform);
         }
-        
+        else {
 
+            mycamera.transform.SetParent(TempCameraAnchorFp);
+            headPos.transform.SetParent(AvatarRoot);
+            headPos.transform.localPosition = new Vector3(0, 1.3f, -0.09f);
+            ProduceCameraAnchor();
+            cammeraControllerRoot.transform.SetParent(TempCameraAnchorTp.transform);
+            cammeraControllerRoot.transform.localPosition = new Vector3(0,0,0);
+        
+        }
     }
 
     public void ProduceCameraAnchor() {
-        if (!TempCameraAnchorTp)
-        {
+
+        if (!TempCameraAnchorTp){
             TempCameraAnchorTp = new GameObject("Camera Anchor");
+        }
+        if (myMoveMode.isContinousMovement())
+        {
             TempCameraAnchorTp.transform.position = CameraAnchorRoot.position + new Vector3(0, 0.6f, -2);
+        }
+        else if (myMoveMode.isNavigation()) {
+            TempCameraAnchorTp.transform.position = CameraAnchorRoot.position + new Vector3(0, 10f, -4);
         }
     }
 
@@ -129,10 +173,47 @@ public class SwitchModel : MonoBehaviour
         {
             Destroy(TempCameraAnchorTp);
         }
-        
-    
     }
 
+    public void controllteleportandNav() {
+
+        if (myMoveMode.isContinousMovement())
+        {
+            teleportcontroller.enabled = false;
+            navMeshAgent.enabled = false;
+            ControllRayInteracte();
+        }
+        else if (myMoveMode.isNavigation()) {
+            teleportcontroller.enabled = false;
+            navMeshAgent.enabled = true;
+            ControllRayInteracte();
+            navMeshAgent.SetDestination(transform.position);
+            //navMeshAgent.Stop();
+        }
+        else if (myMoveMode.isTeleport())
+        {
+
+            Debug.Log(navMeshAgent.destination);
+            navMeshAgent.enabled = false;
+            teleportcontroller.enabled = true;
+            ControllRayInteracte();
+        }
+    }
+
+    void ControllRayInteracte() {
+
+        if (myMoveMode.isContinousMovement())
+        {
+            LeftHandRay.SetActive(false);
+            LeftLineVisual.enabled = false; 
+            LeftLineInteractor.enabled = false;
+        }
+        else {
+            LeftHandRay.SetActive(true);
+            LeftLineVisual.enabled = true;
+            LeftLineInteractor.enabled = true;
+        }
+    }
 
 
 }
